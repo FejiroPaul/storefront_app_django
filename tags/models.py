@@ -28,6 +28,8 @@ class TaggedItemManager(models.Manager):
 class Tag(models.Model):
     label = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.label
 
 class TaggedItem(models.Model): # class for what tag applies to what object
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)

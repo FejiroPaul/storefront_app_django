@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 
 # creating a promotions class which would have many to many relationship with products
 # products can have different promotions and promotions can apply to different products
@@ -46,7 +47,11 @@ class Collection(models.Model):
     # we can set the name of the reverse relationship django creates to something we want...
     #.. or just use a "+" in there if we dont care about the reverse relationship
     # the "+" tells django not to create that reverse relationship
+    def __str__(self): # overriding the str method to influence default display of collection objecs in admin site
+        return self.title
 
+    class Meta:
+        ordering=['title']
 
 class Product(models.Model):
 
@@ -65,8 +70,13 @@ class Product(models.Model):
     # this would mmean that the default slug value will be defined in our migrations file only
     # the alternative is the line below where we can either set a default value or set null to true
     # slug = models.SlugField(default='-')
-    description = models.TextField()
-    unit_price = models.DecimalField(max_digits=6,decimal_places=2)
+    description = models.TextField(null=True,blank=True)
+    unit_price = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        validators= [MinValueValidator(1)] # adding data validation for this field so we can add lass than 1..
+        #.. when adding new product via admin form
+    )
     inventory = models.IntegerField()
     last_update = models.DateTimeField(auto_now=True)
     collection = models.ForeignKey(Collection,on_delete=models.PROTECT)
@@ -74,10 +84,16 @@ class Product(models.Model):
 
     # in the collections field above we have a dependency on the collections class
 
-    promotions = models.ManyToManyField(Promotion)
+    promotions = models.ManyToManyField(Promotion,blank=True)
     # we also supply a keyword argument called related name to set the name of the field django creates..
     #... in the promotions class to complete the relationship e.g
     # promotions = models.ManyToManyField(Promotion, related_name="products")
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        ordering= ['title']
 
 class Customer(models.Model):
     # sometimes we may also need to limit the number of values that can be stored in  field
@@ -104,11 +120,17 @@ class Customer(models.Model):
     birth_date = models.DateField(null=True) # using date field rather than datetime cus we dont need time here
     membership = models.CharField(max_length=1, choices=MEMBERSHIP_CHOICES, default= MEMBERSHIP_BRONZE)
 
-    # class Meta:  # google options that can be defined in this subclass
-    #     db_table = 'store_customer' # setting the table name
-    #     indexes = [ # creating indexes
-    #         models.Index(fields=["last_name","first_name"])
-    #     ]
+    class Meta:  # google options that can be defined in this subclass
+        # db_table = 'store_customer' # setting the table name
+        # indexes = [ # creating indexes
+        #     models.Index(fields=["last_name","first_name"])
+        # ]
+        ordering= ['first_name','last_name']
+    def __str__(self):
+        return f'{self.first_name} {self.last_name}'
+
+
+
 
 class Order(models.Model):
     PAYMENT_STATUS_PENDING = "P"

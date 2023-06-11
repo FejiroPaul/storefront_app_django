@@ -17,6 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+
+# we can include some customisation for the admin app here since it is imported above
+# admin.site.register(models.Collection)
+admin.site.site_header = 'Storefront admin'
+admin.site.index_title = 'Admin'
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('__debug__/', include('debug_toolbar.urls')),
