@@ -4,30 +4,62 @@ from django.http import HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.mixins import ListModelMixin,CreateModelMixin
+from rest_framework.generics import ListCreateAPIView
 from rest_framework import status
 from .models import Collection, Product
 from .serializers import CollectionSerializer, ProductSerializer
 
-# up till now we have been using function based views
-# django also support class based view which make our code cleaner and concise
-# they also provide reuse opportunities
 
-# to convert the product_list view to a class based view we use the apiview class from rest framework
-# it is the base class for all class based views
-class ProductList(APIView):
-    # we define two methods, get for handling get requests and post for post requests
-    # incoming requests automatically get dispatched to either of these based on the method
-    # we no longer have the if statements in our code
-    def get(self,request):
-        queryset = Product.objects.select_related('collection').all()
-        serializer = ProductSerializer(
-            queryset, many=True, context={'request': request})
-        return Response(serializer.data)
-    def post(self,request):
-        serializer = ProductSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+# in the productlist view get method we create a queryset
+# feed into a serialiser
+# return the response with serialised data
+# we have the same pattern for listing our collections
+# the two differences in both places is how we create our queryset and the serialiser used
+# the post method for products and collections also have similarities
+# in cases like this, mixings then come into play
+# we import mixins from restframework above
+# we have different mixings for performing different operations on resources
+# most times we dont use mixins directly
+# we use classes that combine one or more mixins and these are called generic views
+# e.g listcreatapiview which combines list model mixin and create model mixin
+# import particular generic view from generics above and let the view funciton below inherit from it
+
+# generic view also grant us added functionality in our browsable api for creating resources
+
+class ProductList(ListCreateAPIView):
+    # we have to override two methods
+    # the get queryset method and the get serialiser context
+    # def get_queryset(self):
+    #     return Product.objects.select_related('collection').all()
+    # def get_serializer_class(self):
+    #     # we return a class not an object
+    #     return ProductSerializer
+    # note that in our initial serialiser in the get method, we add in a context object
+    # we do the same by overriding the get_serializer_context method for the generic view
+
+    # overriding the get_queryset and get serilaiser class methods above are useful when we have a certain logic we want to implement
+    # for example checking a user then returning a queryset based on permissions
+    # if we are just returning a queryset expression or serialiser class..
+    #.. we can instead just use the generic view attributes below
+
+    queryset = Product.objects.select_related('collection').all()
+    serializer_class = ProductSerializer
+    def get_serializer_context(self):
+        return{'request': self.request}
+
+    # we no longer need the methods below because they are already implemented in by the generic view
+
+    # def get(self,request):
+    #     queryset = Product.objects.select_related('collection').all()
+    #     serializer = ProductSerializer(
+    #         queryset, many=True, context={'request': request})
+    #     return Response(serializer.data)
+    # def post(self,request):
+    #     serializer = ProductSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class ProductDetail(APIView):
     def get(self,request, id):
@@ -48,18 +80,10 @@ class ProductDetail(APIView):
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-@api_view(['GET', 'POST'])
-def collection_list(request):
-    if request.method == 'GET':
-        queryset = Collection.objects.annotate(products_count=Count('products')).all()
-        serializer = CollectionSerializer(queryset, many=True)
-        return Response(serializer.data)
-    elif request.method == 'POST':
-        serializer = CollectionSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
+class CollcetionList(ListCreateAPIView):
+    queryset = Collection.objects.annotate(
+        products_count=Count('products')).all()
+    serializer_class = CollectionSerializer
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def collection_detail(request, pk):

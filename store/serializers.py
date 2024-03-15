@@ -8,7 +8,10 @@ class CollectionSerializer(serializers.ModelSerializer):
         model = Collection
         fields = ['id', 'title', 'products_count']
 
-    products_count = serializers.IntegerField()
+    products_count = serializers.IntegerField(read_only=True)
+    # we mark the products_count field as read only because it isnt used for creating or updating a collection
+    # it prevents an error when we try to put or update a collections resource..
+    #... in our api, without specifying the product count
 
 
 class ProductSerializer(serializers.ModelSerializer):
