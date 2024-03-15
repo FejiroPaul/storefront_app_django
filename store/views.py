@@ -8,7 +8,7 @@ from rest_framework.mixins import ListModelMixin,CreateModelMixin
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework import status
-from .models import Collection, Product
+from .models import Collection, Product, OrderItem
 from .serializers import CollectionSerializer, ProductSerializer
 
 # we have our product list and product detail classes
@@ -30,12 +30,26 @@ class ProductViewSet(ModelViewSet):
     def get_serializer_context(self):
         return {'request': self.request}
 
-    def delete(self,request,pk):
-        product = get_object_or_404(Product, pk=pk)
-        if product.orderitems.count() > 0:
-            return Response({'error': 'Product cannot be deleted because it is associated with an order item.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        product.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    # overriding the destry method rather than delete method below
+    # so that delete option only pops up in our browsable api when dealing with a particular product
+    def destroy(self, request, *args, **kwargs):
+        # change validation logic
+        # we need a product object but rather than retrieve the object again..
+        # in the destroy method in the destroy model mixin , the implementation calls the obbject from the database
+        # so we dont need to retrieve it twice
+        # we rather change the validation logic
+        if OrderItem.objects.filter(product_id=kwargs['pk']).count() > 0:
+            return Response({'error': 'Product cannot be deleted because it is associated with an order item.'},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        # otherwise call the destroy method of the base class
+        return super().destroy(request, *args, **kwargs)
+
+    # def delete(self,request,pk):
+    #     product = get_object_or_404(Product, pk=pk)
+    #     if product.orderitems.count() > 0:
+    #         return Response({'error': 'Product cannot be deleted because it is associated with an order item.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    #     product.delete()
+    #     return Response(status=status.HTTP_204_NO_CONTENT)
 
 # class ProductList(ListCreateAPIView):
 #     # queryset = Product.objects.select_related('collection').all()
@@ -76,12 +90,25 @@ class CollectionViewSet(ReadOnlyModelViewSet):
         products_count=Count('products')).all()
     serializer_class = CollectionSerializer
 
-    def delete(self, request,pk):
-        collection = get_object_or_404(Collection,pk = pk)
-        if collection.products.count() > 0:
-            return Response({'error': 'Collection cannot be deleted because it includes one or more products.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        collection.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def destroy(self, request, *args, **kwargs):
+        # change validation logic
+        # we need a product object but rather than retrieve the object again..
+        # in the destroy method in the destroy model mixin , the implementation calls the obbject from the database
+        # so we dont need to retrieve it twice
+        # we rather change the validation logic
+        if Product.objects.filter(collection_id=kwargs['pk']).count() > 0:
+            return Response({'error': 'Collection cannot be deleted because it includes one or more products.'},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        # otherwise call the destroy method of the base class
+        return super().destroy(request, *args, **kwargs)
+
+    # def delete(self, request,pk):
+    #     collection = get_object_or_404(Collection,pk = pk)
+    #     if collection.products.count() > 0:
+    #         return Response({'error': 'Collection cannot be deleted because it includes one or more products.'},
+    #                         status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    #     collection.delete()
+    #     return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CollectionList(ListCreateAPIView):
     queryset = Collection.objects.annotate(
