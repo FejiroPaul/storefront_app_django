@@ -10,24 +10,26 @@ from rest_framework.mixins import ListModelMixin,CreateModelMixin
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 
 from .filters import ProductFilter
 from .models import Collection, Product, OrderItem, Review
 from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer
 
-# to sort fields we import Ordering filter
+# for pagination we import the pagination class
+# we set the page size in our settings module
+# we have set pagination now for the products endpoint
+# but if we want to have the pagination globally we use the defualt pagination class setting in settings module
+# we will therefore not need to define it explicitly in our producsts viewset
+
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    # using djangofilterbackend
-    # adding in search filter and ordering filters
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = ProductFilter
+    pagination_class = PageNumberPagination
     search_fields = ['title','description']
     ordering_fields = ['unit_price','last_update']
-    # we can also reference fields in related classes e.g below
-    # search_fields = ['title','description','collection__title']
-
 
 
     def get_serializer_context(self):
