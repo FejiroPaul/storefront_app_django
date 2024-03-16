@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.filters import SearchFilter
 from rest_framework.views import APIView
 from rest_framework.mixins import ListModelMixin,CreateModelMixin
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -14,56 +15,28 @@ from .filters import ProductFilter
 from .models import Collection, Product, OrderItem, Review
 from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer
 
-# currently we can see filter our products endpoint by collection
-# what if we wanted to filter via another field...the implementation would get complex in the get queryset method
-# this is where we use generic filtering
-# we use a third party library called django-filter
-# install django filter and add to the list of installed apps
-# then import djangofilterbackend from the library. this backend gives us genric filtering
-# it also adds a filter button to our browsable api
-# for info on how to implement custom filters read the django filters documentation
-# we would need custom filters in cases where we want to filter maybe unit price by a value of 10...
-# but what we want is less than 10 not exactly 10
-# a brief example is shown in the filters.py file
-
+# what if we want to find products by their title or description
+# this is where we use searching
+# searching is for text based fields
+# we import searchfilter class from rest framework filters
+# a search bar will be added to our filter function in our browsable api
 class ProductViewSet(ModelViewSet):
+    queryset = Product.objects.all()
     serializer_class = ProductSerializer
     # using djangofilterbackend
-    filter_backends = [DjangoFilterBackend]
-    # with the backend above, all we need to do is specify what fields we need to use for filtering
-    # filterset_fields = ['collection_id']
-    # we can therfore get rid of our queryset logic and bring back our queryset attribute
-    queryset = Product.objects.all()
-
-    # if we want to implement a custom filter e.g for unit price
-    # so we can filter on less than and greater than rather than exact matches
-    # we use a filterset class. one defined in the filters.py file we created
-    # all out filtering is encapsulated inside that class
-    # we no longer thus need the filterset_fields attribute
+    # adding in search filter
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = ProductFilter
+    search_fields = ['title','description']
+    # we can also reference fields in related classes e.g below
+    # search_fields = ['title','description','collection__title']
 
-    # def get_queryset(self):
-    #     # return Product.objects.filter(collection_id=self.request.query_params['collection_id'])
-    #     # in the implementation above, if we dont have a collection id, our code will therefore fail
-    #     # the correct way to implement the filtering by collection is therefore below
-    #     # first define a queryset
-    #     queryset = Product.objects.all()
-    #     # then try to read collection id from the query string
-    #     collection_id = self.request.query_params.get('collection_id')
-    #     if collection_id is not None:
-    #        queryset= queryset.filter(collection_id = collection_id)
-    #     return queryset
+
+
     def get_serializer_context(self):
         return {'request': self.request}
 
-    # overriding the destry method rather than delete method below
-    # so that delete option only pops up in our browsable api when dealing with a particular product
     def destroy(self, request, *args, **kwargs):
-        # change validation logic
-        # we need a product object but rather than retrieve the object again..
-        # in the destroy method in the destroy model mixin , the implementation calls the obbject from the database
-        # so we dont need to retrieve it twice
-        # we rather change the validation logic
         if OrderItem.objects.filter(product_id=kwargs['pk']).count() > 0:
             return Response({'error': 'Product cannot be deleted because it is associated with an order item.'},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
