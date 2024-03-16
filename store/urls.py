@@ -33,7 +33,9 @@ from . import views
 # create the parent routers
 router = routers.DefaultRouter()
 # register resources
-router.register('products',views.ProductViewSet)
+# we explicitly state the basename for products endpoint because we override the get queryset logic for the products viewset
+#..in our views module. by that basename, as usual we will have url patterns called products-list and producst-detail
+router.register('products',views.ProductViewSet, basename='products')
 router.register('collections',views.CollectionViewSet)
 # create the child routers
 # first argument is parent router, second arg is parent prefix, last arg is our lookup parameter

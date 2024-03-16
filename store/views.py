@@ -11,12 +11,32 @@ from rest_framework import status
 from .models import Collection, Product, OrderItem, Review
 from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer
 
+# currently we can see all products in our products list when we go to that endpoint
+# if we wanted to filter the list by say collection to show only products in collection 1
+# we cant call the filter method in our queryset attribute
+# we have to override the get queryset method
 
+# we would however need to set the basename since we override the get_queryset method
+# for example, in our nested router for our products viewset , we set the basename while registering the products review route
+# django uses the basename to generate the name of our url patterns
+# by default django uses the queryset attribte to figure out the basename for our urls
+# after deleting the queryset attribute below and using the get queryset method, django cant figure out what the name should be called based on the logic
+# we thus have to explicitly specify the basename when we register the products url in our url module
 class ProductViewSet(ModelViewSet):
-    queryset = Product.objects.all()
+    # queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
-    # using this single viewset class we can now view our products, create, update and delete
+    def get_queryset(self):
+        # return Product.objects.filter(collection_id=self.request.query_params['collection_id'])
+        # in the implementation above, if we dont have a collection id, our code will therefore fail
+        # the correct way to implement the filtering by collection is therefore below
+        # first define a queryset
+        queryset = Product.objects.all()
+        # then try to read collection id from the query string
+        collection_id = self.request.query_params.get('collection_id')
+        if collection_id is not None:
+           queryset= queryset.filter(collection_id = collection_id)
+        return queryset
     def get_serializer_context(self):
         return {'request': self.request}
 
