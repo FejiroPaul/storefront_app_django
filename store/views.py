@@ -14,6 +14,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from .filters import ProductFilter
 from .models import Collection, Product, OrderItem, Review
+from .pagination import DefaultPagination
 from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer
 
 # for pagination we import the pagination class
@@ -22,12 +23,20 @@ from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializ
 # but if we want to have the pagination globally we use the defualt pagination class setting in settings module
 # we will therefore not need to define it explicitly in our producsts viewset
 
+# using the implementation above for pagination,and setting page size in the settings module
+# we will get a warning in the console saying ..You have specified a default PAGE_SIZE pagination rest_framework setting, without specifying also a DEFAULT_PAGINATION_CLASS.
+#...HINT: The default for DEFAULT_PAGINATION_CLASS is None. In previous versions this was PageNumberPagination. If you wish to define PAGE_SIZE globally whilst defining pagination_class on a per-view basis you may silence this check.
+# we can get rid of this by implementing a custom pagination class
+# this class is implemented in the pagination.py file we create
+# we then set the page size there rather than in the settings module
+
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = ProductFilter
-    pagination_class = PageNumberPagination
+    # pagination_class = PageNumberPagination # using normal rest_framework pagination class
+    pagination_class = DefaultPagination # using our custom pagination class where we set page size
     search_fields = ['title','description']
     ordering_fields = ['unit_price','last_update']
 
