@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.filters import SearchFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.views import APIView
 from rest_framework.mixins import ListModelMixin,CreateModelMixin
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -15,19 +15,16 @@ from .filters import ProductFilter
 from .models import Collection, Product, OrderItem, Review
 from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer
 
-# what if we want to find products by their title or description
-# this is where we use searching
-# searching is for text based fields
-# we import searchfilter class from rest framework filters
-# a search bar will be added to our filter function in our browsable api
+# to sort fields we import Ordering filter
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     # using djangofilterbackend
-    # adding in search filter
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    # adding in search filter and ordering filters
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = ProductFilter
     search_fields = ['title','description']
+    ordering_fields = ['unit_price','last_update']
     # we can also reference fields in related classes e.g below
     # search_fields = ['title','description','collection__title']
 
