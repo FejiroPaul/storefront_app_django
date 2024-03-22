@@ -1,5 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+from uuid import uuid4
 
 
 class Promotion(models.Model):
@@ -96,13 +97,33 @@ class Address(models.Model):
 
 class Cart(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
+    # as we know django automatically created a primary key field called id which is an integer field
+    # in our Api we would therefore have endpoints with that id such as store/carts/1
+    # this poses a problem because a hacker can easily guess one of those and send a request to that endpoint and mess with the cart
+    # to solve this problem we use a GUID: globally unique identifier which a long 32 character string
+    # it makes it harder for a hacker to guess that string
+    # this is implemented using the python uuid library
+    # we have to redefine our primary key field
+    # notice that the uuid function below is not called but rather a reference to it is just made
+    # if we call the function, at the time of migration a guid will be hardcoded to our migration file
+    # we don't want to use the same value for every shopping cart, hence why we reference rather than call
+    id = models.UUIDField(primary_key=True, default=uuid4)
 
 
 class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
+    # we assign a related name to the foreign key field cart below
+    # so that the reverse relationship in the cart model is called items rather than cartitem_set
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    # we want to make sure we only have a single instance of a product in a shopping cart
+    # so that if we add the same product multiple times to the same cart, we should only increase the quantity
+    # using a unique constraint we can make sure there there arent any duplicate records for the same product in the same cart
+    # this is implemented in the meta class
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveSmallIntegerField()
 
+    class Meta:
+        # we use a list of lists because we could have multiple unique constraints on different fields
+        unique_together=[['cart','product']]
 class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
     name = models.CharField(max_length=255)
